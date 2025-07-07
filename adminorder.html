@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rongmelody Order Management</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f7f9fc; color: #1d3557;
+  }
+  header {
+    background: #1d3557; color: white;
+    padding: 1rem 2rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  nav {
+    display: flex;
+    background: #457b9d;
+  }
+  nav a {
+    flex: 1;
+    padding: 1rem;
+    border: none;
+    background: #457b9d;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+  }
+  nav a.active,
+  nav a:hover {
+    background: #1d3557;
+  }
+  main {
+    padding: 1rem 2rem;
+    max-width: 1200px;
+    margin: auto;
+  }
+  /* Alerts */
+  .alert {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d3557;
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    display: none;
+    z-index: 99999;
+    font-weight: 600;
+  }
+
+  /* Order management buttons above orderGrid */
+  .buttons {
+    margin-bottom: 1rem;
+  }
+  .buttons button {
+    background:#e63946;
+    color:#fff;
+    border:none;
+    padding:0.5rem 1rem;
+    border-radius:5px;
+    cursor:pointer;
+    margin-right: 0.5rem;
+    font-weight: 600;
+  }
+  .buttons button:disabled {
+    background: #f1999c;
+    cursor: not-allowed;
+  }
+
+  /* Order cards */
+  #orderGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+    gap: 1rem;
+  }
+  .order-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    padding: 1rem;
+    position: relative;
+  }
+  .order-card input[type="checkbox"] {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    transform: scale(1.2);
+  }
+  .order-header {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1d3557;
+    padding-left: 2.5rem;
+  }
+  .order-info p {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+    padding-left: 2.5rem;
+  }
+  .order-items {
+    margin-top: 0.5rem;
+    padding-left: 2.5rem;
+  }
+  .order-item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+  }
+  .order-item img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .order-item-details {
+    flex: 1;
+  }
+  .order-item-details p {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .order-item-qty-price {
+    text-align: right;
+    font-weight: 600;
+    color: #e63946;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    main {
+      padding: 1rem;
+    }
+    nav {
+      flex-direction: column;
+    }
+    nav a {
+      padding: 0.7rem;
+    }
+    #orderGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>Rongmelody Order Management</header>
+
+<nav>
+  <a href="admindashboard.html">Notifications & Products</a>
+  <a href="adminorder.html" class="active">Order Management</a>
+</nav>
+
+<main>
+  <h2 class="section-title">Order Management</h2>
+  <div class="buttons">
+    <button id="deleteSelectedOrdersBtn" disabled>Delete Selected</button>
+    <button id="deleteAllOrdersBtn">Delete All</button>
+  </div>
+  <div id="orderGrid"></div>
+</main>
+
+<div class="alert" id="alertBox"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAaLeBQR6_Vj9NA2rrN5saoNz0rfrF5Rn8",
+    authDomain: "rongmelody-ce703.firebaseapp.com",
+    projectId: "rongmelody-ce703",
+    storageBucket: "rongmelody-ce703.appspot.com",
+    messagingSenderId: "870902722812",
+    appId: "1:870902722812:web:e2c500f67dc4d339c92779"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // DOM refs
+  const orderGrid = document.getElementById('orderGrid');
+  const deleteSelectedOrdersBtn = document.getElementById('deleteSelectedOrdersBtn');
+  const deleteAllOrdersBtn = document.getElementById('deleteAllOrdersBtn');
+  const alertBox = document.getElementById('alertBox');
+
+  // Utility: show alert
+  function showAlert(msg, duration = 3000) {
+    alertBox.textContent = msg;
+    alertBox.style.display = 'block';
+    setTimeout(() => alertBox.style.display = 'none', duration);
+  }
+
+  // Load Orders
+  async function loadOrders() {
+    orderGrid.innerHTML = '';
+    try {
+      const snap = await getDocs(collection(db, "orders"));
+      if (snap.empty) {
+        orderGrid.innerHTML = '<p>No orders found.</p>';
+        deleteSelectedOrdersBtn.disabled = true;
+        return;
+      }
+
+      snap.forEach(docSnap => {
+        const o = docSnap.data();
+        const id = docSnap.id;
+
+        if (!o.name) o.name = 'N/A';
+        if (!o.phone) o.phone = 'N/A';
+        if (!o.address) o.address = 'N/A';
+
+        let totalPrice = 0;
+        let itemsHTML = '';
+
+        if (Array.isArray(o.cart)) {
+          o.cart.forEach(item => {
+            // Treat undefined qty or price as 1
+            const qty = (typeof item.qty === 'number' && item.qty > 0) ? item.qty : 1;
+            const price = (typeof item.price === 'number' && item.price > 0) ? item.price : 1;
+
+            totalPrice += qty * price;
+            itemsHTML += `
+              <div class="order-item">
+                <img src="${item.image}" alt="${item.name}">
+                <div class="order-item-details">
+                  <p>${item.name}</p>
+                </div>
+                <div class="order-item-qty-price">
+                  <p>${qty} x ৳${price.toFixed(2)}</p>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        const div = document.createElement('div');
+        div.className = 'order-card';
+        div.innerHTML = `
+          <input type="checkbox" data-id="${id}">
+          <div class="order-header">Order ID: ${id}</div>
+          <div class="order-info">
+            <p><strong>Name:</strong> ${o.name}</p>
+            <p><strong>Phone:</strong> ${o.phone}</p>
+            <p><strong>Address:</strong> ${o.address}</p>
+            <p><strong>Total Price:</strong> ৳${totalPrice.toFixed(2)}</p>
+          </div>
+          <div class="order-items">${itemsHTML}</div>
+        `;
+        orderGrid.appendChild(div);
+      });
+
+      // Checkbox event listeners to toggle deleteSelectedOrdersBtn
+      const checkboxes = orderGrid.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(chk => {
+        chk.addEventListener('change', () => {
+          const anyChecked = [...checkboxes].some(c => c.checked);
+          deleteSelectedOrdersBtn.disabled = !anyChecked;
+        });
+      });
+
+    } catch (e) {
+      showAlert("Failed to load orders");
+      console.error(e);
+    }
+  }
+
+  // Delete document helper
+  async function deleteDocById(docId) {
+    try {
+      await deleteDoc(doc(db, "orders", docId));
+      showAlert("Deleted successfully");
+    } catch (e) {
+      showAlert("Failed to delete");
+      console.error(e);
+    }
+  }
+
+  // Delete selected orders
+  async function deleteSelectedOrders() {
+    const checkedBoxes = [...orderGrid.querySelectorAll('input[type="checkbox"]:checked')];
+    if (checkedBoxes.length === 0) {
+      showAlert("No orders selected");
+      return;
+    }
+    if (!confirm(`Delete ${checkedBoxes.length} selected order(s)?`)) return;
+
+    for (const chk of checkedBoxes) {
+      const id = chk.getAttribute('data-id');
+      await deleteDocById(id);
+    }
+    await loadOrders();
+  }
+
+  // Delete all orders
+  async function deleteAllOrders() {
+    if (!confirm("Delete ALL orders? This cannot be undone.")) return;
+    try {
+      const snap = await getDocs(collection(db, "orders"));
+      for (const docSnap of snap.docs) {
+        await deleteDocById(docSnap.id);
+      }
+      showAlert("All orders deleted");
+      loadOrders();
+    } catch (e) {
+      showAlert("Failed to delete all orders");
+      console.error(e);
+    }
+  }
+
+  deleteSelectedOrdersBtn.onclick = deleteSelectedOrders;
+  deleteAllOrdersBtn.onclick = deleteAllOrders;
+
+  // Initial load
+  loadOrders();
+</script>
+</body>
+</html>

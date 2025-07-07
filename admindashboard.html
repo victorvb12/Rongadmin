@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rongmelody Admin Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f7f9fc; color: #1d3557;
+  }
+  header {
+    background: #1d3557; color: white;
+    padding: 1rem 2rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  nav {
+    display: flex;
+    background: #457b9d;
+  }
+  nav a {
+    flex: 1;
+    padding: 1rem;
+    border: none;
+    background: #457b9d;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+  }
+  nav a.active,
+  nav a:hover {
+    background: #1d3557;
+  }
+  main {
+    padding: 1rem 2rem;
+    max-width: 1200px;
+    margin: auto;
+  }
+  /* Alerts */
+  .alert {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d3557;
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    display: none;
+    z-index: 99999;
+    font-weight: 600;
+  }
+
+  /* Notification list */
+  #notificationList,
+  #productList {
+    margin-bottom: 2rem;
+  }
+  h2.section-title {
+    border-bottom: 2px solid #e63946;
+    padding-bottom: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .list-item {
+    background: white;
+    margin-bottom: 0.7rem;
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .list-item > div:first-child {
+    flex: 1;
+    margin-right: 1rem;
+    overflow-wrap: break-word;
+  }
+  .list-item .actions button {
+    margin-left: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    transition: background 0.3s ease;
+  }
+  .btn-edit {
+    background: #457b9d;
+  }
+  .btn-edit:hover {
+    background: #1d3557;
+  }
+  .btn-delete {
+    background: #e63946;
+  }
+  .btn-delete:hover {
+    background: #a62833;
+  }
+
+  /* Product cards */
+  .product-card {
+    background: white;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .product-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .product-info {
+    flex: 1;
+  }
+  .product-info h4 {
+    margin: 0 0 0.4rem 0;
+    font-weight: 700;
+    color: #1d3557;
+  }
+  .product-info p {
+    margin: 0;
+    color: #e63946;
+    font-weight: 700;
+  }
+  .product-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Modal for editing notifications/products */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-bg.open {
+    display: flex;
+  }
+  .modal-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+    position: relative;
+  }
+  .modal-content h3 {
+    margin-top: 0;
+    color: #1d3557;
+  }
+  .modal-content label {
+    font-weight: 600;
+    display: block;
+    margin: 0.7rem 0 0.3rem 0;
+  }
+  .modal-content input, .modal-content textarea, .modal-content select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    resize: vertical;
+  }
+  .modal-content textarea {
+    min-height: 60px;
+  }
+  .modal-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+  .modal-actions button {
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-save {
+    background: #1d3557;
+    color: white;
+  }
+  .btn-cancel {
+    background: #e63946;
+    color: white;
+  }
+  .modal-close {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.5rem;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: #e63946;
+    border: none;
+    background: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    main {
+      padding: 1rem;
+    }
+    .product-card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .product-actions {
+      width: 100%;
+      justify-content: flex-start;
+      margin-top: 0.5rem;
+    }
+    nav {
+      flex-direction: column;
+    }
+    nav a {
+      padding: 0.7rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>Rongmelody Admin Dashboard</header>
+
+<nav>
+  <a href="admindashboard.html" class="active">Notifications & Products</a>
+  <a href="adminorder.html">Order Management</a>
+</nav>
+
+<main>
+  <section id="notificationList">
+    <h2 class="section-title">Notifications</h2>
+    <div id="notificationsContainer"></div>
+    <button id="addNotificationBtn" style="margin-top:0.5rem; background:#457b9d; color:#fff; border:none; padding:0.5rem 1rem; border-radius:5px; cursor:pointer;">
+      + Add Notification
+    </button>
+  </section>
+
+  <section id="productList">
+    <h2 class="section-title">Products</h2>
+    <div id="productsContainer"></div>
+    <button id="addProductBtn" style="margin-top:0.5rem; background:#457b9d; color:#fff; border:none; padding:0.5rem 1rem; border-radius:5px; cursor:pointer;">
+      + Add Product
+    </button>
+  </section>
+</main>
+
+<!-- Modal Template -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-content" id="modalContent">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <h3 id="modalTitle"></h3>
+    <form id="modalForm">
+      <!-- Dynamic form fields here -->
+      <div id="modalFields"></div>
+      <div class="modal-actions">
+        <button type="submit" class="btn-save">Save</button>
+        <button type="button" class="btn-cancel" id="modalCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="alert" id="alertBox"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, doc, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAaLeBQR6_Vj9NA2rrN5saoNz0rfrF5Rn8",
+    authDomain: "rongmelody-ce703.firebaseapp.com",
+    projectId: "rongmelody-ce703",
+    storageBucket: "rongmelody-ce703.appspot.com",
+    messagingSenderId: "870902722812",
+    appId: "1:870902722812:web:e2c500f67dc4d339c92779"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // DOM refs
+  const notificationsContainer = document.getElementById('notificationsContainer');
+  const productsContainer = document.getElementById('productsContainer');
+
+  const addNotificationBtn = document.getElementById('addNotificationBtn');
+  const addProductBtn = document.getElementById('addProductBtn');
+
+  const modalBg = document.getElementById('modalBg');
+  const modalContent = document.getElementById('modalContent');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalForm = document.getElementById('modalForm');
+  const modalFields = document.getElementById('modalFields');
+  const modalClose = document.getElementById('modalClose');
+  const modalCancel = document.getElementById('modalCancel');
+
+  const alertBox = document.getElementById('alertBox');
+
+  // Current editing doc refs
+  let currentEditType = null; // "notifications" or "products"
+  let currentEditDocId = null;
+
+  // Utility: show alert
+  function showAlert(msg, duration = 3000) {
+    alertBox.textContent = msg;
+    alertBox.style.display = 'block';
+    setTimeout(() => alertBox.style.display = 'none', duration);
+  }
+
+  // Load Notifications
+  async function loadNotifications() {
+    notificationsContainer.innerHTML = '';
+    try {
+      const snap = await getDocs(collection(db, "notifications"));
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.innerHTML = `
+          <div>${data.message}</div>
+          <div class="actions">
+            <button class="btn-edit" data-id="${id}" data-type="notifications">Edit</button>
+            <button class="btn-delete" data-id="${id}" data-type="notifications">Delete</button>
+          </div>
+        `;
+        notificationsContainer.appendChild(div);
+      });
+    } catch (e) {
+      showAlert("Failed to load notifications");
+      console.error(e);
+    }
+  }
+
+  // Load Products
+  async function loadProducts() {
+    productsContainer.innerHTML = '';
+    try {
+      const snap = await getDocs(collection(db, "products"));
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        const card = document.createElement('div');
+        card.className = 'list-item';
+        card.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="${data.image}" alt="${data.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />
+            <div>
+              <h4 style="margin: 0 0 0.2rem 0;">${data.name}</h4>
+              <p style="margin: 0; color: #e63946; font-weight: 700;">৳${data.price.toFixed(2)}</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-edit" data-id="${id}" data-type="products">Edit</button>
+            <button class="btn-delete" data-id="${id}" data-type="products">Delete</button>
+          </div>
+        `;
+        productsContainer.appendChild(card);
+      });
+    } catch (e) {
+      showAlert("Failed to load products");
+      console.error(e);
+    }
+  }
+
+  // Delete document helper
+  async function deleteDocById(collectionName, docId) {
+    try {
+      await deleteDoc(doc(db, collectionName, docId));
+      showAlert("Deleted successfully");
+    } catch (e) {
+      showAlert("Failed to delete");
+      console.error(e);
+    }
+  }
+
+  // Edit/Delete buttons handler (for notifications and products)
+  document.body.addEventListener('click', async e => {
+    if (e.target.matches('.btn-delete')) {
+      const id = e.target.getAttribute('data-id');
+      const type = e.target.getAttribute('data-type');
+      if (!confirm(`Delete this ${type.slice(0, -1)}?`)) return;
+      await deleteDocById(type, id);
+      if(type === 'notifications') loadNotifications();
+      else if(type === 'products') loadProducts();
+    } else if (e.target.matches('.btn-edit')) {
+      currentEditType = e.target.getAttribute('data-type');
+      currentEditDocId = e.target.getAttribute('data-id');
+      await openEditModal(currentEditType, currentEditDocId);
+    }
+  });
+
+  // Add new notification or product buttons
+  addNotificationBtn.onclick = () => openAddModal('notifications');
+  addProductBtn.onclick = () => openAddModal('products');
+
+  // Modal open for adding
+  function openAddModal(type) {
+    currentEditType = type;
+    currentEditDocId = null;
+    modalTitle.textContent = `Add New ${type.slice(0, -1).charAt(0).toUpperCase() + type.slice(1, -1)}`;
+    modalFields.innerHTML = '';
+    if (type === 'notifications') {
+      modalFields.innerHTML = `
+        <label for="messageInput">Message</label>
+        <textarea id="messageInput" name="message" required></textarea>
+      `;
+    } else if (type === 'products') {
+      modalFields.innerHTML = `
+        <label for="nameInput">Name</label>
+        <input id="nameInput" name="name" type="text" required />
+        <label for="descriptionInput">Description</label>
+        <textarea id="descriptionInput" name="description"></textarea>
+        <label for="priceInput">Price (৳)</label>
+        <input id="priceInput" name="price" type="number" min="0" step="0.01" required />
+        <label for="imageInput">Image URL</label>
+        <input id="imageInput" name="image" type="url" required />
+      `;
+    }
+    modalBg.classList.add('open');
+  }
+
+  // Modal open for editing
+  async function openEditModal(type, docId) {
+    modalTitle.textContent = `Edit ${type.slice(0, -1).charAt(0).toUpperCase() + type.slice(1, -1)}`;
+    modalFields.innerHTML = '';
+    try {
+      const docRef = doc(db, type, docId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        showAlert("Document not found");
+        return;
+      }
+      const data = docSnap.data();
+      if (type === 'notifications') {
+        modalFields.innerHTML = `
+          <label for="messageInput">Message</label>
+          <textarea id="messageInput" name="message" required>${data.message || ''}</textarea>
+        `;
+      } else if (type === 'products') {
+        modalFields.innerHTML = `
+          <label for="nameInput">Name</label>
+          <input id="nameInput" name="name" type="text" required value="${data.name || ''}" />
+          <label for="descriptionInput">Description</label>
+          <textarea id="descriptionInput" name="description">${data.description || ''}</textarea>
+          <label for="priceInput">Price (৳)</label>
+          <input id="priceInput" name="price" type="number" min="0" step="0.01" required value="${data.price || 0}" />
+          <label for="imageInput">Image URL</label>
+          <input id="imageInput" name="image" type="url" required value="${data.image || ''}" />
+        `;
+      }
+      modalBg.classList.add('open');
+    } catch (e) {
+      showAlert("Failed to load document");
+      console.error(e);
+    }
+  }
+
+  // Modal close handlers
+  modalClose.onclick = closeModal;
+  modalCancel.onclick = closeModal;
+  modalBg.onclick = (e) => { if (e.target === modalBg) closeModal(); };
+  function closeModal() {
+    modalBg.classList.remove('open');
+    modalForm.reset();
+  }
+
+  // Modal form submit
+  modalForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(modalForm);
+    try {
+      if (!currentEditType) return;
+      const collectionRef = collection(db, currentEditType);
+      if (currentEditDocId) {
+        // Update existing
+        const docRef = doc(db, currentEditType, currentEditDocId);
+        const updateData = {};
+        for (const [key, value] of formData.entries()) {
+          updateData[key] = key === 'price' ? parseFloat(value) : value;
+        }
+        await updateDoc(docRef, updateData);
+        showAlert(`${currentEditType.slice(0, -1)} updated`);
+      } else {
+        // Add new
+        const addData = {};
+        for (const [key, value] of formData.entries()) {
+          addData[key] = key === 'price' ? parseFloat(value) : value;
+        }
+        await addDoc(collectionRef, addData);
+        showAlert(`${currentEditType.slice(0, -1)} added`);
+      }
+      closeModal();
+      if(currentEditType === 'notifications') loadNotifications();
+      else if(currentEditType === 'products') loadProducts();
+    } catch (e) {
+      showAlert("Failed to save");
+      console.error(e);
+    }
+  };
+
+  // Initial load
+  loadNotifications();
+  loadProducts();
+</script>
+</body>
+</html>
